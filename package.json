@@ -1,0 +1,22 @@
+{
+  "name": "stockapp",
+  "version": "1.0.0",
+  "description": "stocks trend",
+  "main": "server.js",
+  "scripts": {
+    "test": "node stockRepository.js"
+  },
+  "author": "rimi",
+  "license": "ISC",
+  "dependencies": {
+    "handlebars": "^4.7.6",
+    "hapi": "18.1.0",
+    "lodash.filter": "4.6.0",
+    "lodash.take": "4.1.1",
+    "node-fetch": "2.6.0",
+    "vision": "5.4.4",
+    "moment": "2.26.0",
+    "alphavantage": "2.0.1",
+    "date-fns": "2.14.0"
+  }
+}
