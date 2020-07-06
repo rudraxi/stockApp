@@ -1,0 +1,65 @@
+version: 2.1
+orbs:
+    gcp-gcr: circleci/gcp-gcr@0.6.1
+    cloudrun: circleci/gcp-cloud-run@1.0.2
+
+defaults: &defaults
+  machine:
+  environment:
+    - APP_VERSION: $CIRCLE_SHA1
+
+jobs:
+  test:
+    machine: true
+    <<: *defaults
+    steps:
+      - checkout
+      - run: docker build -t us.gcr.io/$GOOGLE_PROJECT_ID/$DOCKER_IMAGE -t us.gcr.io/$GOOGLE_PROJECT_ID/$DOCKER_IMAGE:latest .
+      - run: docker run -d --rm --name node_app us.gcr.io/$GOOGLE_PROJECT_ID/$DOCKER_IMAGE:latest
+      - run: docker stop node_app
+  
+  publish_and_deploy:
+     docker:
+       - image: circleci/python:3.7.4
+     steps:
+       - checkout
+       - setup_remote_docker:
+          docker_layer_caching: false
+       - run: docker build -t us.gcr.io/$GOOGLE_PROJECT_ID/$DOCKER_IMAGE -t us.gcr.io/$GOOGLE_PROJECT_ID/$DOCKER_IMAGE:latest .
+       - run:
+          name: Set environment variables
+          command: |
+           echo 'export PATH=~$PATH:~/.local/bin' >> $BASH_ENV
+           echo ${GCP_PROJECT_KEY} | base64 --decode --ignore-garbage > ${HOME}/gcloud-service-key.json
+           echo 'export GOOGLE_CLOUD_KEYS=$(cat $HOME/gcloud-service-key.json)' >> $BASH_ENV
+           echo 'export TAG=${CIRCLE_SHA1}' >> $BASH_ENV
+       - run: cat /home/circleci/gcloud-service-key.json
+       - gcp-gcr/gcr-auth:
+           gcloud-service-key: GOOGLE_CLOUD_KEYS
+           google-project-id: GOOGLE_PROJECT_ID
+           google-compute-zone: GOOGLE_COMPUTE_ZONE
+       - gcp-gcr/push-image:
+           google-project-id: GOOGLE_PROJECT_ID
+           registry-url: "us.gcr.io"
+           image: $DOCKER_IMAGE  
+       - cloudrun/deploy:
+           platform: "managed"
+           image: "us.gcr.io/$GOOGLE_PROJECT_ID/$DOCKER_IMAGE"
+           service-name: $DOCKER_IMAGE
+           region: $GOOGLE_COMPUTE_ZONE
+           unauthenticated: true
+           args: --update-env-vars=[ci=true,REACT_APP_WHOST='https://node-app-gwbvyf6dda-ue.a.run.app']
+
+
+
+
+workflows:
+    version: 2
+    build-and-deploy:
+        jobs:
+           - test:
+               context: webApp
+           - publish_and_deploy:
+               requires:
+                  - test
+               context: webApp
