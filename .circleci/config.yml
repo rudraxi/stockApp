@@ -15,8 +15,8 @@ jobs:
     steps:
       - checkout
       - run: docker build -t us.gcr.io/$GOOGLE_PROJECT_ID/$DOCKER_IMAGE -t us.gcr.io/$GOOGLE_PROJECT_ID/$DOCKER_IMAGE:latest .
-      - run: docker run -d --rm --name node_app us.gcr.io/$GOOGLE_PROJECT_ID/$DOCKER_IMAGE:latest
-      - run: docker stop node_app
+      - run: docker run -d --rm --name stockapp us.gcr.io/$GOOGLE_PROJECT_ID/$DOCKER_IMAGE:latest
+      - run: docker stop stockapp
   
   publish_and_deploy:
      docker:
@@ -58,8 +58,8 @@ workflows:
     build-and-deploy:
         jobs:
            - test:
-               context: webApp
+               context: stockapp
            - publish_and_deploy:
                requires:
                   - test
-               context: webApp
+               context: stockapp
